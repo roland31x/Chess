@@ -20,14 +20,16 @@ namespace Chess
     /// </summary>
     public partial class MainWindow : Window
     {
-        //List<Piece> wpieces = new List<Piece>();
-        //List<Piece> bpieces = new List<Piece>();
+        List<Piece> wpieces = new List<Piece>();
+        List<Piece> bpieces = new List<Piece>();
         Label[,] labels;
         Label[,] bg;
         Brush LightBlack = new SolidColorBrush(new Color() { R = 50, G = 50, B = 50, A = 255 });
         Piece? selected;
         List<int[]>? legalmoves;
         PieceColor Turn = PieceColor.White;
+        bool whiteincheck = false;
+        bool blackincheck = false;
         public MainWindow()
         {
             InitializeComponent();
@@ -66,7 +68,12 @@ namespace Chess
             if(legalmoves != null)
                 foreach (int[] p in legalmoves)
                     bg[p[0], p[1]].Background = Brushes.LimeGreen;
-            
+            if (whiteincheck)
+                bg[wpieces.OfType<King>().First().I, wpieces.OfType<King>().First().J].Background = Brushes.Orange;
+            if (blackincheck)
+                bg[bpieces.OfType<King>().First().I, bpieces.OfType<King>().First().J].Background = Brushes.Orange;
+
+
         }
         void InitGame()
         {
@@ -108,49 +115,49 @@ namespace Chess
             {
                 Pawn white = new Pawn(PieceColor.White, 6, i);
                 Pawn black = new Pawn(PieceColor.Black, 1, i);
-                //wpieces.Add(white);
-                //bpieces.Add(black);
+                wpieces.Add(white);
+                bpieces.Add(black);
             }
 
             Rook whiter1 = new Rook(PieceColor.White, 7, 0);
             Rook blackr1 = new Rook(PieceColor.Black, 0, 0);
-            //wpieces.Add(whiter1);
-            //bpieces.Add(blackr1);
+            wpieces.Add(whiter1);
+            bpieces.Add(blackr1);
 
             Knight whitek1 = new Knight(PieceColor.White, 7, 1);
             Knight blackk1 = new Knight(PieceColor.Black, 0, 1);
-            //wpieces.Add(whitek1);
-            //bpieces.Add(blackk1);
+            wpieces.Add(whitek1);
+            bpieces.Add(blackk1);
 
             Bishop whiteb1 = new Bishop(PieceColor.White, 7, 2);
             Bishop blackb1 = new Bishop(PieceColor.Black, 0, 2);
-            //wpieces.Add(whiteb1);
-            //bpieces.Add(blackb1);
+            wpieces.Add(whiteb1);
+            bpieces.Add(blackb1);
 
             Queen whiteq1 = new Queen(PieceColor.White, 7, 3);
-            Queen blackq1 = new Queen(PieceColor.Black, 0, 3);           
-            //wpieces.Add(whiteq1);
-            //bpieces.Add(blackq1);
+            Queen blackq1 = new Queen(PieceColor.Black, 0, 3);
+            wpieces.Add(whiteq1);
+            bpieces.Add(blackq1);
 
             King whiteking = new King(PieceColor.White, 7, 4);
             King blackking = new King(PieceColor.Black, 0, 4);
-            //wpieces.Add(whiteking);
-            //bpieces.Add(blackking);
+            wpieces.Add(whiteking);
+            bpieces.Add(blackking);
 
             Bishop whiteb2 = new Bishop(PieceColor.White, 7, 5);
             Bishop blackb2 = new Bishop(PieceColor.Black, 0, 5);
-            //wpieces.Add(whiteb2);
-            //bpieces.Add(blackb2);
+            wpieces.Add(whiteb2);
+            bpieces.Add(blackb2);
 
             Knight whitek2 = new Knight(PieceColor.White, 7, 6);
             Knight blackk2 = new Knight(PieceColor.Black, 0, 6);
-            //wpieces.Add(whitek2);
-            //bpieces.Add(blackk2);
+            wpieces.Add(whitek2);
+            bpieces.Add(blackk2);
 
             Rook whiter2 = new Rook(PieceColor.White, 7, 7);
             Rook blackr2 = new Rook(PieceColor.Black, 0, 7);
-            //wpieces.Add(whiter2);
-            //bpieces.Add(blackr2);
+            wpieces.Add(whiter2);
+            bpieces.Add(blackr2);
 
         }
 
@@ -174,21 +181,69 @@ namespace Chess
                 {
                     if (l == labels[m[0], m[1]])
                     {
+                        Piece[,] savestate = GetState(Piece.Pieces);
                         selected.Move(m[0], m[1]);
+                        if (!LegalMove())
+                            Piece.Pieces = savestate;
                         okmove = true;
+                        CheckForCheck(Turn == PieceColor.White ? wpieces : bpieces, Turn);
+                        Cursor = Cursors.Arrow;
                         break;
                     }
                 }
                 if (okmove)
-                {
                     Turn = Turn == PieceColor.White ? PieceColor.Black : PieceColor.White;
-                }
                 selected = null;
                 legalmoves = null;
             }
             UpdateUI();
         }
-
+        bool LegalMove()
+        {
+            if (whiteincheck)
+            {
+                CheckForCheck();
+                if (whiteincheck)
+                    return false;
+            }
+            if (blackincheck)
+            {
+                CheckForCheck()
+            }
+            return true;
+        }
+        Piece[,] GetState(Piece[,] p)
+        {
+            Piece[,] tor = new Piece[8, 8];
+            for(int i = 0; i < 8; i++)
+            {
+                for(int j = 0; j < 8; j++)
+                {
+                    tor[i, j] = p[i, j];
+                }
+            }
+            return tor;
+        }
+        void CheckForCheck(List<Piece> pieces, PieceColor turn)
+        {
+            whiteincheck = false;
+            blackincheck = false;
+            Piece targetking = turn == PieceColor.White ? bpieces.OfType<King>().First() : wpieces.OfType<King>().First();
+            foreach (Piece p in pieces)
+            {
+                List<int[]> legal = p.PieceMoves();
+                foreach (int[] l in legal)
+                {
+                    if (l[0] == targetking.I && l[1] == targetking.J)
+                    {
+                        if (targetking.Color == PieceColor.White)
+                            whiteincheck = true;
+                        else
+                            blackincheck = true;
+                    }
+                }
+            }
+        }
         private void P_MouseLeave(object sender, MouseEventArgs e)
         {
             Cursor = Cursors.Arrow;
