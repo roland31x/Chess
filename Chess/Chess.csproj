@@ -1,0 +1,45 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net7.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <UseWPF>true</UseWPF>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Remove="Pieces\black-bishop.png" />
+    <None Remove="Pieces\black-king.png" />
+    <None Remove="Pieces\black-knight.png" />
+    <None Remove="Pieces\black-pawn.png" />
+    <None Remove="Pieces\black-queen.png" />
+    <None Remove="Pieces\black-rook.png" />
+    <None Remove="Pieces\King_B.svg" />
+    <None Remove="Pieces\King_W.png" />
+    <None Remove="Pieces\King_W.svg" />
+    <None Remove="Pieces\Queen_B.svg" />
+    <None Remove="Pieces\Queen_W.svg" />
+    <None Remove="Pieces\white-bishop.png" />
+    <None Remove="Pieces\white-king.png" />
+    <None Remove="Pieces\white-knight.png" />
+    <None Remove="Pieces\white-pawn.png" />
+    <None Remove="Pieces\white-queen.png" />
+    <None Remove="Pieces\white-rook.png" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Resource Include="Pieces\black-bishop.png" />
+    <Resource Include="Pieces\black-king.png" />
+    <Resource Include="Pieces\black-knight.png" />
+    <Resource Include="Pieces\black-pawn.png" />
+    <Resource Include="Pieces\black-queen.png" />
+    <Resource Include="Pieces\black-rook.png" />
+    <Resource Include="Pieces\white-bishop.png" />
+    <Resource Include="Pieces\white-king.png" />
+    <Resource Include="Pieces\white-knight.png" />
+    <Resource Include="Pieces\white-pawn.png" />
+    <Resource Include="Pieces\white-queen.png" />
+    <Resource Include="Pieces\white-rook.png" />
+  </ItemGroup>
+
+</Project>
