@@ -1,5 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -9,9 +9,9 @@ using System.Windows.Data;
 using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Media;
-using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
+using Chess.PieceClasses;
 
 namespace Chess
 {
@@ -24,12 +24,13 @@ namespace Chess
         List<Piece> bpieces = new List<Piece>();
         Label[,] labels;
         Label[,] bg;
-        Brush LightBlack = new SolidColorBrush(new Color() { R = 50, G = 50, B = 50, A = 255 });
         Piece? selected;
         List<int[]>? legalmoves;
         PieceColor Turn = PieceColor.White;
         bool whiteincheck = false;
         bool blackincheck = false;
+
+        bool calc = false;
         public MainWindow()
         {
             InitializeComponent();
@@ -86,7 +87,7 @@ namespace Chess
                     Label l = new Label();
                     l.Height = 98;
                     l.Width = 98;
-                    l.Background = (i + j) % 2 == 0 ? Brushes.Beige : LightBlack;
+                    l.Background = (i + j) % 2 == 0 ? Brushes.Beige : Brushes.BurlyWood;
                     MainCanvas.Children.Add(l);
                     Canvas.SetLeft(l,1 + 100 * j);
                     Canvas.SetTop(l,1 + 100 * i);
@@ -161,8 +162,10 @@ namespace Chess
 
         }
 
-        private void PieceSelect(object sender, MouseButtonEventArgs e)
+        private async void PieceSelect(object sender, MouseButtonEventArgs e)
         {
+            if (calc)
+                return;
             Label l = sender as Label;
             if (selected == null)
             {
@@ -171,11 +174,11 @@ namespace Chess
                     Piece selection = (Piece)((sender as Label).Tag);
                     selected = selection;
                     legalmoves = selection.PieceMoves();
-                }
-                                   
+                }                                  
             }
             else
             {
+                calc = true;
                 bool okmove = false;
                 foreach (int[] m in legalmoves)
                 {
@@ -183,10 +186,19 @@ namespace Chess
                     {
                         Piece[,] savestate = GetState(Piece.Pieces);
                         selected.Move(m[0], m[1]);
-                        if (!LegalMove())
-                            Piece.Pieces = savestate;
-                        okmove = true;
-                        CheckForCheck(Turn == PieceColor.White ? wpieces : bpieces, Turn);
+                        bool legal = await LegalMove(Turn);
+                        if (!legal)
+                        {                            
+                            Piece.ResetStateTo(savestate);
+                            await FlashAnimation();
+                        }                            
+                        else
+                        {
+                            okmove = true;
+                            selected.Moved = true;                            
+                        }
+                        await CheckForCheck();
+
                         Cursor = Cursors.Arrow;
                         break;
                     }
@@ -197,19 +209,35 @@ namespace Chess
                 legalmoves = null;
             }
             UpdateUI();
+            calc = false;
         }
-        bool LegalMove()
+        async Task FlashAnimation()
         {
-            if (whiteincheck)
+            Stopwatch sw = new Stopwatch();
+            sw.Start();
+            while(sw.ElapsedMilliseconds < 1000)
             {
-                CheckForCheck();
-                if (whiteincheck)
-                    return false;
+                if ((sw.ElapsedMilliseconds / 100) % 2 == 0)
+                    MainCanvas.Background = Brushes.Red;
+                else
+                    MainCanvas.Background = Brushes.Gray;
+                await Task.Delay(30);
             }
-            if (blackincheck)
-            {
-                CheckForCheck()
-            }
+            MainCanvas.Background = Brushes.Gray;
+            sw.Stop();
+            sw = null;
+        }
+        async Task<bool> LegalMove(PieceColor c)
+        {
+            bool initialwhite = whiteincheck;
+            bool initialblack = blackincheck;
+
+            await Task.Run(CheckForCheck);
+
+            if (c == PieceColor.Black && blackincheck)
+                return false;
+            if (c == PieceColor.White && whiteincheck)
+                return false;
             return true;
         }
         Piece[,] GetState(Piece[,] p)
@@ -224,25 +252,31 @@ namespace Chess
             }
             return tor;
         }
-        void CheckForCheck(List<Piece> pieces, PieceColor turn)
+        Task CheckForCheck()
         {
             whiteincheck = false;
             blackincheck = false;
-            Piece targetking = turn == PieceColor.White ? bpieces.OfType<King>().First() : wpieces.OfType<King>().First();
-            foreach (Piece p in pieces)
+            Piece targetking = bpieces.OfType<King>().First();
+            foreach (Piece p in wpieces.Where(x => x.isAlive))
             {
                 List<int[]> legal = p.PieceMoves();
                 foreach (int[] l in legal)
-                {
                     if (l[0] == targetking.I && l[1] == targetking.J)
-                    {
-                        if (targetking.Color == PieceColor.White)
-                            whiteincheck = true;
-                        else
-                            blackincheck = true;
-                    }
-                }
+                        blackincheck = true;
             }
+
+            targetking = wpieces.OfType<King>().First();
+            foreach (Piece p in bpieces.Where(x => x.isAlive))
+            {
+                List<int[]> legal = p.PieceMoves();
+                foreach (int[] l in legal)
+                    if (l[0] == targetking.I && l[1] == targetking.J)
+                        whiteincheck = true;
+            }
+
+            // check for game over in case it's a mate // todo
+
+            return Task.CompletedTask;
         }
         private void P_MouseLeave(object sender, MouseEventArgs e)
         {
@@ -268,469 +302,6 @@ namespace Chess
                     }                      
                 }
             }               
-        }
-    }
-    public class Rook : Piece
-    {
-        public Rook(PieceColor c, int i, int j) : base(c, i, j)
-        {
-            Body = c == PieceColor.White ? Rook[0] : Rook[1];
-        }
-
-        public override List<int[]> PieceMoves()
-        {
-            List<int[]> toreturn = new List<int[]>();
-            for (int i = 1; i < 8; i++)
-            {
-                bool ok = false;
-                bool attack = CheckMove(I + i, J, true);
-                bool move = CheckMove(I + i, J, false);
-                if (attack || move)
-                {
-                    toreturn.Add(new int[] { I + i, J });
-                    ok = true;
-                    if (attack)
-                        ok = false;
-                }
-                if (!ok)
-                    break;
-            }
-
-            for (int i = 1; i < 8; i++)
-            {
-                bool ok = false;
-                bool attack = CheckMove(I - i, J, true);
-                bool move = CheckMove(I - i, J, false);
-                if (attack || move)
-                {
-                    toreturn.Add(new int[] { I - i, J });
-                    ok = true;
-                    if (attack)
-                        ok = false;
-                }
-                if (!ok)
-                    break;
-            }
-
-            for (int i = 1; i < 8; i++)
-            {
-                bool ok = false;
-                bool attack = CheckMove(I, J - i, true);
-                bool move = CheckMove(I, J - i, false);
-                if (attack || move)
-                {
-                    toreturn.Add(new int[] { I, J - i });
-                    ok = true;
-                    if (attack)
-                        ok = false;
-                }
-                if (!ok)
-                    break;
-            }
-
-            for (int i = 1; i < 8; i++)
-            {
-                bool ok = false;
-                bool attack = CheckMove(I, J + i, true);
-                bool move = CheckMove(I, J + i, false);
-                if (attack || move)
-                {
-                    toreturn.Add(new int[] { I, J + i });
-                    ok = true;
-                    if (attack)
-                        ok = false;
-                }
-                if (!ok)
-                    break;
-            }
-
-            return toreturn;
-        }
-    }
-    public class Queen : Piece
-    {
-        public Queen(PieceColor c, int i, int j) : base(c, i, j)
-        {
-            Body = c == PieceColor.White ? Queen[0] : Queen[1];
-        }
-
-        public override List<int[]> PieceMoves()
-        {
-            List<int[]> toreturn = new List<int[]>();
-
-            for (int i = 1; i < 8; i++)
-            {
-                bool ok = false;
-                bool attack = CheckMove(I + i, J, true);
-                bool move = CheckMove(I + i, J, false);
-                if (attack || move)
-                {
-                    toreturn.Add(new int[] { I + i, J });
-                    ok = true;
-                    if (attack)
-                        ok = false;
-                }
-                if (!ok)
-                    break;
-            }
-
-            for (int i = 1; i < 8; i++)
-            {
-                bool ok = false;
-                bool attack = CheckMove(I - i, J, true);
-                bool move = CheckMove(I - i, J, false);
-                if (attack || move)
-                {
-                    toreturn.Add(new int[] { I - i, J });
-                    ok = true;
-                    if (attack)
-                        ok = false;
-                }
-                if (!ok)
-                    break;
-            }
-
-            for (int i = 1; i < 8; i++)
-            {
-                bool ok = false;
-                bool attack = CheckMove(I, J - i, true);
-                bool move = CheckMove(I, J - i, false);
-                if (attack || move)
-                {
-                    toreturn.Add(new int[] { I, J - i });
-                    ok = true;
-                    if (attack)
-                        ok = false;
-                }
-                if (!ok)
-                    break;
-            }
-
-            for (int i = 1; i < 8; i++)
-            {
-                bool ok = false;
-                bool attack = CheckMove(I, J + i, true);
-                bool move = CheckMove(I, J + i, false);
-                if (attack || move)
-                {
-                    toreturn.Add(new int[] { I, J + i });
-                    ok = true;
-                    if (attack)
-                        ok = false;
-                }
-                if (!ok)
-                    break;
-            }
-
-            for (int i = 1; i < 8; i++)
-            {
-                bool ok = false;
-                bool attack = CheckMove(I + i, J + i, true);
-                bool move = CheckMove(I + i, J + i, false);
-                if (attack || move)
-                {
-                    toreturn.Add(new int[] { I + i, J + i });
-                    ok = true;
-                    if (attack)
-                        ok = false;
-                }
-                if (!ok)
-                    break;
-            }
-
-            for (int i = 1; i < 8; i++)
-            {
-                bool ok = false;
-                bool attack = CheckMove(I - i, J - i, true);
-                bool move = CheckMove(I - i, J - i, false);
-                if (attack || move)
-                {
-                    toreturn.Add(new int[] { I - i, J - i });
-                    ok = true;
-                    if (attack)
-                        ok = false;
-                }
-                if (!ok)
-                    break;
-            }
-
-            for (int i = 1; i < 8; i++)
-            {
-                bool ok = false;
-                bool attack = CheckMove(I + i, J - i, true);
-                bool move = CheckMove(I + i, J - i, false);
-                if (attack || move)
-                {
-                    toreturn.Add(new int[] { I + i, J - i });
-                    ok = true;
-                    if (attack)
-                        ok = false;
-                }
-                if (!ok)
-                    break;
-            }
-
-            for (int i = 1; i < 8; i++)
-            {
-                bool ok = false;
-                bool attack = CheckMove(I - i, J + i, true);
-                bool move = CheckMove(I - i, J + i, false);
-                if (attack || move)
-                {
-                    toreturn.Add(new int[] { I - i, J + i });
-                    ok = true;
-                    if (attack)
-                        ok = false;
-                }
-                if (!ok)
-                    break;
-            }
-
-            return toreturn;
-        }
-    }
-    public class King : Piece
-    {
-        public King(PieceColor c, int i, int j) : base(c, i, j)
-        {
-            Body = c == PieceColor.White ? King[0] : King[1];
-        }
-
-        public override List<int[]> PieceMoves()
-        {
-            List<int[]> toreturn = new List<int[]>();
-            for(int i = -1; i <= 1; i++)
-            {
-                for(int j = -1; j <= 1; j++)
-                {
-                    if (i == 0 && j == 0)
-                        continue;
-                    if (CheckMove(I + i, J + j, true) || CheckMove(I + i, J + j, false))
-                    {
-                        toreturn.Add(new int[] { I + i, J + j });
-                    }
-                }
-            }
-
-            return toreturn;
-        }
-    }
-    public class Bishop : Piece
-    {
-        public Bishop(PieceColor c, int i, int j) : base(c, i, j)
-        {
-            Body = c == PieceColor.White ? Bishop[0] : Bishop[1];
-        }
-
-        public override List<int[]> PieceMoves()
-        {
-            List<int[]> toreturn = new List<int[]>();
-            for (int i = 1; i < 8; i++)
-            {
-                bool ok = false;
-                bool attack = CheckMove(I + i, J + i, true);
-                bool move = CheckMove(I + i, J + i, false);
-                if (attack || move)
-                {
-                    toreturn.Add(new int[] { I + i, J + i});
-                    ok = true;
-                    if (attack)
-                        ok = false;
-                }
-                if (!ok)
-                    break;
-            }
-
-            for (int i = 1; i < 8; i++)
-            {
-                bool ok = false;
-                bool attack = CheckMove(I - i, J - i, true);
-                bool move = CheckMove(I - i, J - i, false);
-                if (attack || move)
-                {
-                    toreturn.Add(new int[] { I - i, J - i });
-                    ok = true;
-                    if (attack)
-                        ok = false;
-                }
-                if (!ok)
-                    break;
-            }
-
-            for (int i = 1; i < 8; i++)
-            {
-                bool ok = false;
-                bool attack = CheckMove(I + i, J - i, true);
-                bool move = CheckMove(I + i, J - i, false);
-                if (attack || move)
-                {
-                    toreturn.Add(new int[] { I + i, J - i });
-                    ok = true;
-                    if (attack)
-                        ok = false;
-                }
-                if (!ok)
-                    break;
-            }
-
-            for (int i = 1; i < 8; i++)
-            {
-                bool ok = false;
-                bool attack = CheckMove(I - i, J + i, true);
-                bool move = CheckMove(I - i, J + i, false);
-                if (attack || move)
-                {
-                    toreturn.Add(new int[] { I - i, J + i });
-                    ok = true;
-                    if (attack)
-                        ok = false;
-                }
-                if (!ok)
-                    break;
-            }
-
-            return toreturn;
-        }
-    }
-    public class Knight : Piece
-    {
-        static List<int[]> L = new List<int[]>()
-        {
-            new int[] { 1, 2 },
-            new int[] { 1, -2 },
-            new int[] { -1, 2 },
-            new int[] { -1, -2 },
-            new int[] { 2, 1 },
-            new int[] { 2, -1 },
-            new int[] { -2, 1 },
-            new int[] { -2, -1 },
-        };
-        public Knight(PieceColor c, int i, int j) : base(c, i, j)
-        {
-            Body = c == PieceColor.White ? Knight[0] : Knight[1];
-        }
-
-        public override List<int[]> PieceMoves()
-        {
-            List<int[]> toreturn = new List<int[]>();
-            foreach (int[] l in L)
-                if(CheckMove(I + l[0], J + l[1], true) ||  CheckMove(I + l[0], J + l[1], false))
-                    toreturn.Add(new int[] { I + l[0], J + l[1] });
-
-            return toreturn;
-        }
-    }
-    public class Pawn : Piece
-    {
-        public Pawn(PieceColor c, int i, int j) : base(c,i,j)
-        {
-            Body = c == PieceColor.White ? Pawn[0] : Pawn[1];
-        }
-
-        public override List<int[]> PieceMoves()
-        {
-            List<int[]> toreturn = new List<int[]>();
-            int idir = Color == PieceColor.White ? -1 : 1;
-            bool forward = false;
-            
-            if (CheckMove(I + idir, J, false))
-            {
-                toreturn.Add(new int[] { I + idir, J });
-                forward = true;
-            }
-                
-            if (CheckMove(I + idir, J - 1, true))
-                toreturn.Add(new int[] { I + idir, J - 1 });
-            if (CheckMove(I + idir, J + 1, true))
-                toreturn.Add(new int[] { I + idir, J + 1 });
-
-            if (!Moved && forward)
-            {
-                if (CheckMove(I + idir * 2, J, false))
-                    toreturn.Add(new int[] { I + idir * 2, J });
-            }
-
-            return toreturn;
-        }
-    }
-    public enum PieceColor
-    {
-        White = 0,
-        Black = 1,
-    }
-    public abstract class Piece
-    {
-        public static Piece[,] Pieces = new Piece[8, 8];
-        public readonly static ImageBrush[] Queen = new ImageBrush[] 
-        { 
-            new ImageBrush(new BitmapImage(new Uri(@"pack://application:,,,/Pieces/white-queen.png"))),
-            new ImageBrush(new BitmapImage(new Uri(@"pack://application:,,,/Pieces/black-queen.png"))) 
-        };
-
-        public readonly static ImageBrush[] King = new ImageBrush[]
-        {
-            new ImageBrush(new BitmapImage(new Uri(@"pack://application:,,,/Pieces/white-king.png"))),
-            new ImageBrush(new BitmapImage(new Uri(@"pack://application:,,,/Pieces/black-king.png")))
-        };
-
-        public readonly static ImageBrush[] Pawn = new ImageBrush[]
-        {
-            new ImageBrush(new BitmapImage(new Uri(@"pack://application:,,,/Pieces/white-pawn.png"))),
-            new ImageBrush(new BitmapImage(new Uri(@"pack://application:,,,/Pieces/black-pawn.png")))
-        };
-
-        public readonly static ImageBrush[] Knight = new ImageBrush[]
-        {
-            new ImageBrush(new BitmapImage(new Uri(@"pack://application:,,,/Pieces/white-knight.png"))),
-            new ImageBrush(new BitmapImage(new Uri(@"pack://application:,,,/Pieces/black-knight.png")))
-        };
-
-        public readonly static ImageBrush[] Bishop = new ImageBrush[]
-        {
-            new ImageBrush(new BitmapImage(new Uri(@"pack://application:,,,/Pieces/white-bishop.png"))),
-            new ImageBrush(new BitmapImage(new Uri(@"pack://application:,,,/Pieces/black-bishop.png")))
-        };
-        public readonly static ImageBrush[] Rook = new ImageBrush[]
-        {
-            new ImageBrush(new BitmapImage(new Uri(@"pack://application:,,,/Pieces/white-rook.png"))),
-            new ImageBrush(new BitmapImage(new Uri(@"pack://application:,,,/Pieces/black-rook.png")))
-        };
-        public int I { get; protected set; }
-        public int J { get; protected set; }
-        public ImageBrush Body { get; protected set; }
-        public PieceColor Color { get; protected set; }
-        public bool Moved { get; protected set; } = false;
-        protected Piece(PieceColor color, int i, int j)
-        {
-            Color = color;
-            I = i;
-            J = j;
-            Pieces[i, j] = this;
-        }
-        protected bool CheckMove(int i, int j, bool canattack)
-        {
-            try
-            {
-                if (Pieces[i, j] == null && !canattack)
-                    return true;
-                else if (Pieces[i, j] != null && canattack && Pieces[i,j].Color != Color)
-                    return true;
-                else
-                    return false;
-            }
-            catch
-            {
-                return false;
-            }
-        }
-        public abstract List<int[]> PieceMoves();
-        public virtual void Move(int newI, int newJ)
-        {
-            Moved = true;
-            Pieces[I, J] = null;
-            I = newI;
-            J = newJ;
-            Pieces[I, J] = this;
         }
     }
 }
