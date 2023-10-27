@@ -5,12 +5,15 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:Chess"
         mc:Ignorable="d"
-        ResizeMode="NoResize"
-        Background="Gray"
+        ResizeMode="NoResize"      
         WindowStyle="None"
         WindowStartupLocation="CenterScreen"
-        Title="MainWindow" Height="800" Width="800">
+        Title="MainWindow" Height="800" Width="1200">
     <Grid>
-        <Canvas x:Name="MainCanvas"></Canvas>
+        <Canvas>
+            <Canvas x:Name="UICanvas" Height="800" Width="1200" HorizontalAlignment="Left" VerticalAlignment="Center"/>
+            <Canvas x:Name="MainCanvas" Width="800" Height="800" Canvas.Left="200" Background="Gray" HorizontalAlignment="Left" VerticalAlignment="Center"/>
+        </Canvas>
+
     </Grid>
 </Window>

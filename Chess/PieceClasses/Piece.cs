@@ -56,6 +56,16 @@ namespace Chess.PieceClasses
         public abstract List<int[]> PieceMoves();
         public virtual void Move(int newI, int newJ)
         {
+            if(Pieces[I,J].GetType() == typeof(Pawn) && (Pieces[I,J] as Pawn)!.EnpassantPos != null)
+            {
+                if((Pieces[I, J] as Pawn)!.EnpassantPos![0] == newI && (Pieces[I, J] as Pawn)!.EnpassantPos![1] == newJ)
+                {
+                    int dir = Color == PieceColor.White ? 1 : -1;
+                    Pieces[newI + dir, newJ].isAlive = false;
+                    Pieces[newI + dir, newJ] = null;               
+                }
+            }
+            
             if(Pieces[newI, newJ] != null)
                 Pieces[newI, newJ].isAlive = false;
             Pieces[I, J] = null;

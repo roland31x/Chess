@@ -4,6 +4,7 @@ namespace Chess.PieceClasses
 {
     public class Pawn : Piece
     {
+        public int[]? EnpassantPos;
         public Pawn(PieceColor c, int i, int j) : base(c, i, j)
         {
             Body = c == PieceColor.White ? Pawn[0] : Pawn[1];
@@ -30,6 +31,10 @@ namespace Chess.PieceClasses
             {
                 if (CheckMove(I + idir * 2, J, false))
                     toreturn.Add(new int[] { I + idir * 2, J });
+            }
+            if (EnpassantPos != null)
+            {
+                toreturn.Add(EnpassantPos);
             }
 
             return toreturn;

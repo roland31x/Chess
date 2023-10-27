@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Text;
@@ -24,12 +25,14 @@ namespace Chess
         List<Piece> bpieces = new List<Piece>();
         Label[,] labels;
         Label[,] bg;
+        Piece[,] Game = Piece.Pieces;
         Piece? selected;
         List<int[]>? legalmoves;
         PieceColor Turn = PieceColor.White;
+        bool WhiteEnpassantTurn = false;
+        bool BlackEnpassantTurn = false;
         bool whiteincheck = false;
         bool blackincheck = false;
-
         bool calc = false;
         public MainWindow()
         {
@@ -51,10 +54,10 @@ namespace Chess
                 for(int j = 0; j < 8; j++)
                 {
                     bg[i, j].Background = Brushes.Transparent;
-                    if (Piece.Pieces[i, j] != null)
+                    if (Game[i, j] != null)
                     {
-                        labels[i, j].Background = Piece.Pieces[i, j].Body;
-                        labels[i, j].Tag = Piece.Pieces[i, j];
+                        labels[i, j].Background = Game[i, j].Body;
+                        labels[i, j].Tag = Game[i, j];
                     }
                     else
                     {
@@ -184,6 +187,9 @@ namespace Chess
                 {
                     if (l == labels[m[0], m[1]])
                     {
+                        int starti = selected.I;
+                        int startj = selected.J;
+
                         Piece[,] savestate = GetState(Piece.Pieces);
                         selected.Move(m[0], m[1]);
                         bool legal = await LegalMove(Turn);
@@ -195,8 +201,12 @@ namespace Chess
                         else
                         {
                             okmove = true;
-                            selected.Moved = true;                            
+                            selected.Moved = true;
+                            InvalidateEnpassantTurns();
+                            if(selected.GetType() == typeof(Pawn))
+                                CheckEnpassant((Pawn)selected, starti);
                         }
+
                         await CheckForCheck();
 
                         Cursor = Cursors.Arrow;
@@ -210,6 +220,48 @@ namespace Chess
             }
             UpdateUI();
             calc = false;
+        }
+        void CheckEnpassant(Pawn selected, int starti)
+        {
+            if (Math.Abs(starti - selected.I) == 2)
+            {
+                int leftj = selected.J - 1;
+                int rightj = selected.J + 1;
+                if (leftj > 0 && leftj < 8 && Game[selected.I, leftj] != null)
+                    if (Game[selected.I, leftj].GetType() == typeof(Pawn) && Game[selected.I, leftj].Color != selected.Color)
+                    {
+                        (Game[selected.I, leftj] as Pawn)!.EnpassantPos = new int[] { selected.I - (selected.Color == PieceColor.White ? -1 : 1), selected.J };
+                        if (Turn == PieceColor.White)
+                            BlackEnpassantTurn = true;
+                        else
+                            WhiteEnpassantTurn = true;
+                    }
+
+                if (rightj > 0 && rightj < 8 && Game[selected.I, rightj] != null)
+                    if (Game[selected.I, rightj].GetType() == typeof(Pawn) && Game[selected.I, rightj].Color != selected.Color)
+                    {
+                        (Game[selected.I, rightj] as Pawn)!.EnpassantPos = new int[] { selected.I - (selected.Color == PieceColor.White ? -1 : 1), selected.J };
+                        if (Turn == PieceColor.White)
+                            BlackEnpassantTurn = true;
+                        else
+                            WhiteEnpassantTurn = true;
+                    }
+            }
+        }
+        void InvalidateEnpassantTurns()
+        {
+            if (BlackEnpassantTurn)
+            {
+                foreach (Pawn p in bpieces.OfType<Pawn>())
+                    p.EnpassantPos = null;
+                BlackEnpassantTurn = false;
+            }
+            if (WhiteEnpassantTurn)
+            {
+                foreach (Pawn p in wpieces.OfType<Pawn>())
+                    p.EnpassantPos = null;
+                WhiteEnpassantTurn = false;
+            }
         }
         async Task FlashAnimation()
         {
@@ -229,9 +281,6 @@ namespace Chess
         }
         async Task<bool> LegalMove(PieceColor c)
         {
-            bool initialwhite = whiteincheck;
-            bool initialblack = blackincheck;
-
             await Task.Run(CheckForCheck);
 
             if (c == PieceColor.Black && blackincheck)
