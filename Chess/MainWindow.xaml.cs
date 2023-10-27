@@ -176,7 +176,7 @@ namespace Chess
                 {
                     Piece selection = (Piece)((sender as Label).Tag);
                     selected = selection;
-                    legalmoves = selection.PieceMoves();
+                    legalmoves = selection.PieceMoves(true);
                 }                                  
             }
             else
@@ -308,7 +308,7 @@ namespace Chess
             Piece targetking = bpieces.OfType<King>().First();
             foreach (Piece p in wpieces.Where(x => x.isAlive))
             {
-                List<int[]> legal = p.PieceMoves();
+                List<int[]> legal = p.PieceMoves(false);
                 foreach (int[] l in legal)
                     if (l[0] == targetking.I && l[1] == targetking.J)
                         blackincheck = true;
@@ -317,7 +317,7 @@ namespace Chess
             targetking = wpieces.OfType<King>().First();
             foreach (Piece p in bpieces.Where(x => x.isAlive))
             {
-                List<int[]> legal = p.PieceMoves();
+                List<int[]> legal = p.PieceMoves(false);
                 foreach (int[] l in legal)
                     if (l[0] == targetking.I && l[1] == targetking.J)
                         whiteincheck = true;

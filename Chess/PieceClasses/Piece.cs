@@ -53,10 +53,10 @@ namespace Chess.PieceClasses
                 }
             }
         }
-        public abstract List<int[]> PieceMoves();
+        public abstract List<int[]> PieceMoves(bool byPlayer);
         public virtual void Move(int newI, int newJ)
         {
-            if(Pieces[I,J].GetType() == typeof(Pawn) && (Pieces[I,J] as Pawn)!.EnpassantPos != null)
+            if(Pieces[I, J].GetType() == typeof(Pawn) && (Pieces[I, J] as Pawn)!.EnpassantPos != null)
             {
                 if((Pieces[I, J] as Pawn)!.EnpassantPos![0] == newI && (Pieces[I, J] as Pawn)!.EnpassantPos![1] == newJ)
                 {
@@ -65,8 +65,17 @@ namespace Chess.PieceClasses
                     Pieces[newI + dir, newJ] = null;               
                 }
             }
-            
-            if(Pieces[newI, newJ] != null)
+            if(Pieces[I, J].GetType() == typeof(King) && !(Pieces[I, J] as King)!.Moved)
+            {
+                if(Math.Abs(J - newJ) == 2)
+                {
+                    if(newJ > 3) // king side castle
+                        Pieces[I, 7].Move(I, 5);
+                    else // queen side castle
+                        Pieces[I, 0].Move(I, 3);
+                }
+            }
+            if (Pieces[newI, newJ] != null)
                 Pieces[newI, newJ].isAlive = false;
             Pieces[I, J] = null;
             I = newI;

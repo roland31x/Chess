@@ -4,7 +4,7 @@ namespace Chess.PieceClasses
 {
     public class Knight : Piece
     {
-        static List<int[]> L = new List<int[]>()
+        static readonly List<int[]> L = new List<int[]>()
         {
             new int[] { 1, 2 },
             new int[] { 1, -2 },
@@ -20,7 +20,7 @@ namespace Chess.PieceClasses
             Body = c == PieceColor.White ? Knight[0] : Knight[1];
         }
 
-        public override List<int[]> PieceMoves()
+        public override List<int[]> PieceMoves(bool byPlayer)
         {
             List<int[]> toreturn = new List<int[]>();
             foreach (int[] l in L)

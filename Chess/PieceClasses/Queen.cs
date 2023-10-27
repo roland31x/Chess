@@ -9,7 +9,7 @@ namespace Chess.PieceClasses
             Body = c == PieceColor.White ? Queen[0] : Queen[1];
         }
 
-        public override List<int[]> PieceMoves()
+        public override List<int[]> PieceMoves(bool byPlayer)
         {
             List<int[]> toreturn = new List<int[]>();
 

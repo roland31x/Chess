@@ -9,7 +9,7 @@ namespace Chess.PieceClasses
             Body = c == PieceColor.White ? King[0] : King[1];
         }
 
-        public override List<int[]> PieceMoves()
+        public override List<int[]> PieceMoves(bool byPlayer)
         {
             List<int[]> toreturn = new List<int[]>();
             for (int i = -1; i <= 1; i++)
@@ -24,8 +24,63 @@ namespace Chess.PieceClasses
                     }
                 }
             }
+            if (byPlayer)
+            {
+                if (CanCastleKingSide())
+                    toreturn.Add(new int[] { I, 6 });
+                if (CanCastleQueenSide())
+                    toreturn.Add(new int[] { I, 2 });
+            }          
 
             return toreturn;
+        }
+        bool CanCastleKingSide()
+        {     
+            if (Moved)
+                return false;
+            if (Pieces[I, 7] == null || Pieces[I, 7].Moved)
+                return false;
+
+            PieceColor other = Color == PieceColor.White ? PieceColor.Black : PieceColor.White;
+            for (int j = J + 1; j < 7; j++)
+            {
+                if (Pieces[I, j] != null)
+                    return false;
+                foreach(Piece p in Pieces)
+                {
+                    if(p == null || p.Color != other) 
+                        continue;
+                    List<int[]> moves = p.PieceMoves(false);
+                    foreach (int[] move in moves)
+                        if (move[0] == I && move[1] == j)
+                            return false;
+                }
+            }
+            return true;
+        }
+        bool CanCastleQueenSide()
+        {
+            if (Moved)
+                return false;
+            if (Pieces[I, 0] == null || Pieces[I, 0].Moved)
+                return false;
+
+            PieceColor other = Color == PieceColor.White ? PieceColor.Black : PieceColor.White;
+            for (int j = J - 1; j > 0; j--)
+            {
+                if (Pieces[I, j] != null)
+                    return false;
+                foreach (Piece p in Pieces)
+                {
+                    if (p == null || p.Color != other)
+                        continue;
+                    List<int[]> moves = p.PieceMoves(false);
+                    foreach (int[] move in moves)
+                        if (move[0] == I && move[1] == j)
+                            return false;
+                }
+            }
+            return true;
         }
     }
 }
