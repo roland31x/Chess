@@ -8,11 +8,25 @@
         ResizeMode="NoResize"      
         WindowStyle="None"
         WindowStartupLocation="CenterScreen"
-        Title="MainWindow" Height="800" Width="1200">
+        Background="LightSlateGray"
+        Title="MainWindow" Height="900" Width="1200">
     <Grid>
         <Canvas>
-            <Canvas x:Name="UICanvas" Height="800" Width="1200" HorizontalAlignment="Left" VerticalAlignment="Center"/>
-            <Canvas x:Name="MainCanvas" Width="800" Height="800" Canvas.Left="200" Background="Gray" HorizontalAlignment="Left" VerticalAlignment="Center"/>
+
+            <Canvas x:Name="UICanvas" Height="900" Width="1200" HorizontalAlignment="Center" VerticalAlignment="Top">
+                <StackPanel x:Name="BlackCaptures" Height="32" Width="798" Canvas.Left="201" Canvas.Top="851" HorizontalAlignment="Center" VerticalAlignment="Top" Orientation="Horizontal">
+
+                </StackPanel>
+                <StackPanel x:Name="WhiteCaptures" Height="32" Width="798" Canvas.Left="201" Canvas.Top="18" HorizontalAlignment="Center" VerticalAlignment="Top" Orientation="Horizontal">
+
+                </StackPanel>
+            </Canvas>
+            <Canvas x:Name="MainCanvas" Width="800" Height="800" Canvas.Left="200" Background="Gray" HorizontalAlignment="Center" VerticalAlignment="Top" Canvas.Top="50"/>
+            <Label Content="RESET" Height="70" Width="138" FontSize="36" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" Background="#FFFDFF00" BorderBrush="#FF484848" BorderThickness="5,5,5,5" Canvas.Left="1034" Canvas.Top="415" HorizontalAlignment="Left" VerticalAlignment="Center" MouseDown="ResetGame_Click" MouseEnter="Label_MouseEnter" MouseLeave="Label_MouseLeave"></Label>
+            <Label Content="X" Height="48" Width="48" FontSize="22" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" Background="Red" BorderBrush="#FF484848" BorderThickness="2,2,2,2" HorizontalAlignment="Left" VerticalAlignment="Center" Canvas.Left="1152" FontWeight="Bold" MouseDown="ExitButton_Click" MouseEnter="Label_MouseEnter" MouseLeave="Label_MouseLeave"/>
+
+
+
         </Canvas>
 
     </Grid>

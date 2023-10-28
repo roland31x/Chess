@@ -14,6 +14,8 @@ namespace Chess.PieceClasses
         public PieceColor Color { get; protected set; }
         public bool Moved { get; set; } = false;
         public bool isAlive { get; protected set; } = true;
+        public delegate void PromotionEventHandler (object sender);
+        public event PromotionEventHandler? PromotionEvent;
         protected Piece(PieceColor color, int i, int j)
         {
             Color = color;
@@ -56,14 +58,16 @@ namespace Chess.PieceClasses
         public abstract List<int[]> PieceMoves(bool byPlayer);
         public virtual void Move(int newI, int newJ)
         {
-            if(Pieces[I, J].GetType() == typeof(Pawn) && (Pieces[I, J] as Pawn)!.EnpassantPos != null)
+            if(Pieces[I, J].GetType() == typeof(Pawn))
             {
-                if((Pieces[I, J] as Pawn)!.EnpassantPos![0] == newI && (Pieces[I, J] as Pawn)!.EnpassantPos![1] == newJ)
+                if ((Color == PieceColor.White && newI == 0) || (Color == PieceColor.Black && newI == 7))
+                    PromotionEvent?.Invoke(this);
+                else if ((Pieces[I, J] as Pawn)!.EnpassantPos != null && (Pieces[I, J] as Pawn)!.EnpassantPos![0] == newI && (Pieces[I, J] as Pawn)!.EnpassantPos![1] == newJ)
                 {
                     int dir = Color == PieceColor.White ? 1 : -1;
                     Pieces[newI + dir, newJ].isAlive = false;
-                    Pieces[newI + dir, newJ] = null;               
-                }
+                    Pieces[newI + dir, newJ] = null;
+                }            
             }
             if(Pieces[I, J].GetType() == typeof(King) && !(Pieces[I, J] as King)!.Moved)
             {

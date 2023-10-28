@@ -10,6 +10,7 @@ using System.Windows.Data;
 using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
 using Chess.PieceClasses;
@@ -34,6 +35,7 @@ namespace Chess
         bool whiteincheck = false;
         bool blackincheck = false;
         bool calc = false;
+
         public MainWindow()
         {
             InitializeComponent();
@@ -76,8 +78,32 @@ namespace Chess
                 bg[wpieces.OfType<King>().First().I, wpieces.OfType<King>().First().J].Background = Brushes.Orange;
             if (blackincheck)
                 bg[bpieces.OfType<King>().First().I, bpieces.OfType<King>().First().J].Background = Brushes.Orange;
+            BlackCaptures.Children.Clear();
+            foreach(Piece p in bpieces.Where(x => !x.isAlive))
+                BlackCaptures.Children.Add(new Label() { Height = 32, Width = 32, Background = p.Body });
+            WhiteCaptures.Children.Clear();
+            foreach (Piece p in wpieces.Where(x => !x.isAlive))
+                WhiteCaptures.Children.Add(new Label() { Height = 32, Width = 32, Background = p.Body });
 
 
+        }
+        void ResetGame()
+        {
+            Turn = PieceColor.White;
+            WhiteEnpassantTurn = false;
+            BlackEnpassantTurn = false;
+            whiteincheck = false;
+            blackincheck = false;
+            calc = false;
+            selected = null;
+            legalmoves = null;
+            for (int i = 0; i < 8; i++)
+                for (int j = 0; j < 8; j++)
+                    Game[i, j] = null;
+            wpieces.Clear();
+            bpieces.Clear();
+            LoadDefaultPositionPieces();
+            UpdateUI();
         }
         void InitGame()
         {
@@ -115,54 +141,81 @@ namespace Chess
                     labels[i, j] = p;
                 }
             }
-            for(int i = 0; i < 8; i++)
-            {
-                Pawn white = new Pawn(PieceColor.White, 6, i);
-                Pawn black = new Pawn(PieceColor.Black, 1, i);
-                wpieces.Add(white);
-                bpieces.Add(black);
-            }
+            LoadDefaultPositionPieces();
+                 
+        }
+        void LoadDefaultPositionPieces()
+        {
+            Queen whiteq = new Queen(PieceColor.White, 7, 3);
+            Queen blackq = new Queen(PieceColor.Black, 0, 3);
+            wpieces.Add(whiteq);
+            bpieces.Add(blackq);
 
             Rook whiter1 = new Rook(PieceColor.White, 7, 0);
             Rook blackr1 = new Rook(PieceColor.Black, 0, 0);
             wpieces.Add(whiter1);
             bpieces.Add(blackr1);
 
-            Knight whitek1 = new Knight(PieceColor.White, 7, 1);
-            Knight blackk1 = new Knight(PieceColor.Black, 0, 1);
-            wpieces.Add(whitek1);
-            bpieces.Add(blackk1);
+            Rook whiter2 = new Rook(PieceColor.White, 7, 7);
+            Rook blackr2 = new Rook(PieceColor.Black, 0, 7);
+            wpieces.Add(whiter2);
+            bpieces.Add(blackr2);
 
             Bishop whiteb1 = new Bishop(PieceColor.White, 7, 2);
             Bishop blackb1 = new Bishop(PieceColor.Black, 0, 2);
             wpieces.Add(whiteb1);
             bpieces.Add(blackb1);
 
-            Queen whiteq1 = new Queen(PieceColor.White, 7, 3);
-            Queen blackq1 = new Queen(PieceColor.Black, 0, 3);
-            wpieces.Add(whiteq1);
-            bpieces.Add(blackq1);
+            Bishop whiteb2 = new Bishop(PieceColor.White, 7, 5);
+            Bishop blackb2 = new Bishop(PieceColor.Black, 0, 5);
+            wpieces.Add(whiteb2);
+            bpieces.Add(blackb2);
 
             King whiteking = new King(PieceColor.White, 7, 4);
             King blackking = new King(PieceColor.Black, 0, 4);
             wpieces.Add(whiteking);
             bpieces.Add(blackking);
 
-            Bishop whiteb2 = new Bishop(PieceColor.White, 7, 5);
-            Bishop blackb2 = new Bishop(PieceColor.Black, 0, 5);
-            wpieces.Add(whiteb2);
-            bpieces.Add(blackb2);
+            Knight whitek1 = new Knight(PieceColor.White, 7, 1);
+            Knight blackk1 = new Knight(PieceColor.Black, 0, 1);
+            wpieces.Add(whitek1);
+            bpieces.Add(blackk1);
 
             Knight whitek2 = new Knight(PieceColor.White, 7, 6);
             Knight blackk2 = new Knight(PieceColor.Black, 0, 6);
             wpieces.Add(whitek2);
             bpieces.Add(blackk2);
 
-            Rook whiter2 = new Rook(PieceColor.White, 7, 7);
-            Rook blackr2 = new Rook(PieceColor.Black, 0, 7);
-            wpieces.Add(whiter2);
-            bpieces.Add(blackr2);
+            for (int i = 0; i < 8; i++)
+            {
+                Pawn white = new Pawn(PieceColor.White, 6, i);
+                Pawn black = new Pawn(PieceColor.Black, 1, i);
+                white.PromotionEvent += PromotionEvent;
+                black.PromotionEvent += PromotionEvent;
+                wpieces.Add(white);
+                bpieces.Add(black);
+            }
+        }
 
+        private async void PromotionEvent(object sender)
+        {
+            Piece topromote = (sender as Piece)!;
+            Piece promoted = await PromotionBoxResult(topromote.Color);
+            if (topromote.Color == PieceColor.White)               
+            {
+                wpieces.Remove(topromote);
+                wpieces.Add(promoted);
+            }
+            else
+            {
+                bpieces.Remove(topromote);
+                bpieces.Add(promoted);
+            }               
+            Game[topromote.I, topromote.J] = promoted;           
+        }
+        async Task<Piece> PromotionBoxResult(PieceColor color)
+        {
+            
         }
 
         private async void PieceSelect(object sender, MouseButtonEventArgs e)
@@ -207,6 +260,7 @@ namespace Chess
                                 CheckEnpassant((Pawn)selected, starti);
                         }
 
+                        
                         await CheckForCheck();
 
                         Cursor = Cursors.Arrow;
@@ -352,5 +406,12 @@ namespace Chess
                 }
             }               
         }
+
+        private void ResetGame_Click(object sender, MouseButtonEventArgs e) => ResetGame();
+        private void ExitButton_Click(object sender, MouseButtonEventArgs e) => Close();
+
+        private void Label_MouseEnter(object sender, MouseEventArgs e) => Cursor = Cursors.Hand;
+
+        private void Label_MouseLeave(object sender, MouseEventArgs e) => Cursor = Cursors.Arrow;
     }
 }
