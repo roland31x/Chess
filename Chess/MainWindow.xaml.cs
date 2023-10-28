@@ -13,6 +13,7 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
+using System.Windows.Threading;
 using Chess.PieceClasses;
 
 namespace Chess
@@ -24,17 +25,29 @@ namespace Chess
     {
         List<Piece> wpieces = new List<Piece>();
         List<Piece> bpieces = new List<Piece>();
-        Label[,] labels;
-        Label[,] bg;
+
+        Label[,] labels = new Label[8, 8];
+        Label[,] plabels = new Label[8, 8];
+        Ellipse[,] ebg = new Ellipse[8, 8];
+        Label[,] bg = new Label[8, 8];
+
         Piece[,] Pieces = new Piece[8, 8];
         Piece? selected;
         List<int[]>? legalmoves;
-        PieceColor Turn = PieceColor.White;
+
+        PieceColor _t = PieceColor.White;
+        PieceColor Turn { get { return _t; } set { _t = value; if (_t == PieceColor.White) { WhiteTimerBG.Fill = Brushes.Goldenrod; BlackTimerBG.Fill = Brushes.White; whitetimer.Start(); blacktimer.Stop(); } else { BlackTimerBG.Fill = Brushes.Goldenrod; WhiteTimerBG.Fill = Brushes.White; blacktimer.Start(); whitetimer.Stop(); } } }
+        
         bool WhiteEnpassantTurn = false;
         bool BlackEnpassantTurn = false;
+
         bool whiteincheck = false;
         bool blackincheck = false;
         bool calc = false;
+
+        Stopwatch whitetimer = new Stopwatch();
+        Stopwatch blacktimer = new Stopwatch();
+        DispatcherTimer timer = new DispatcherTimer();
 
         Piece? promotion;
 
@@ -44,6 +57,15 @@ namespace Chess
             KeyDown += MainWindow_KeyDown;
             InitGame();
             UpdateUI();
+            timer.Interval = TimeSpan.FromMilliseconds(100);
+            timer.Tick += Timer_Tick;
+            timer.Start();
+        }
+
+        private void Timer_Tick(object? sender, EventArgs e)
+        {
+            BlackTimerLabel.Content = blacktimer.Elapsed.ToString(@"mm\:ss");
+            WhiteTimerLabel.Content = whitetimer.Elapsed.ToString(@"mm\:ss");
         }
 
         private void MainWindow_KeyDown(object sender, KeyEventArgs e)
@@ -53,41 +75,41 @@ namespace Chess
         }
         void UpdateUI()
         {
-            for(int i = 0; i < 8; i++)
+            for (int i = 0; i < 8; i++)
             {
-                for(int j = 0; j < 8; j++)
+                for (int j = 0; j < 8; j++)
                 {
+                    ebg[i, j].Fill = Brushes.Transparent;
                     bg[i, j].Background = Brushes.Transparent;
                     if (Pieces[i, j] != null)
                     {
-                        labels[i, j].Background = Pieces[i, j].Body;
+                        plabels[i, j].Background = Pieces[i, j].Body;
                         labels[i, j].Tag = Pieces[i, j];
                     }
                     else
                     {
-                        labels[i, j].Background = Brushes.Transparent;
+                        plabels[i, j].Background = Brushes.Transparent;
                         labels[i, j].Tag = null;
                     }
-                        
+
                 }
             }
-            if(selected != null)
-                bg[selected.I, selected.J].Background = Brushes.Red;
-            if(legalmoves != null)
+            if (selected != null)
+                bg[selected.I, selected.J].Background = Brushes.LimeGreen;
+            if (legalmoves != null)
                 foreach (int[] p in legalmoves)
-                    bg[p[0], p[1]].Background = Brushes.LimeGreen;
+                    ebg[p[0], p[1]].Fill = Brushes.LimeGreen;
             if (whiteincheck)
                 bg[wpieces.OfType<King>().First().I, wpieces.OfType<King>().First().J].Background = Brushes.Orange;
             if (blackincheck)
                 bg[bpieces.OfType<King>().First().I, bpieces.OfType<King>().First().J].Background = Brushes.Orange;
             BlackCaptures.Children.Clear();
-            foreach(Piece p in bpieces.Where(x => !x.isAlive))
+            foreach (Piece p in bpieces.Where(x => !x.isAlive))
                 BlackCaptures.Children.Add(new Label() { Height = 32, Width = 32, Background = p.Body });
             WhiteCaptures.Children.Clear();
             foreach (Piece p in wpieces.Where(x => !x.isAlive))
                 WhiteCaptures.Children.Add(new Label() { Height = 32, Width = 32, Background = p.Body });
-
-
+            
         }
         public void ResetStateTo(Piece[,] state)
         {
@@ -115,6 +137,8 @@ namespace Chess
             calc = false;
             selected = null;
             legalmoves = null;
+            whitetimer.Reset();
+            blacktimer.Reset();
             for (int i = 0; i < 8; i++)
                 for (int j = 0; j < 8; j++)
                     Pieces[i, j] = null;
@@ -125,8 +149,6 @@ namespace Chess
         }
         void InitGame()
         {
-            labels = new Label[8, 8];
-            bg = new Label[8, 8];
             for (int i = 0; i < 8; i++)
             {
                 for (int j = 0; j < 8; j++)
@@ -139,28 +161,46 @@ namespace Chess
                     Canvas.SetLeft(l, 100 * j);
                     Canvas.SetTop(l, 100 * i);
 
-                    Label l2 = new Label();
-                    l2.Height = 100;
-                    l2.Width = 100;
-                    MainCanvas.Children.Add(l2);
-                    Canvas.SetLeft(l2, 100 * j);
-                    Canvas.SetTop(l2, 100 * i);
-                    bg[i, j] = l2;
+                    Label l3 = new Label();
+                    l3.Height = 100;
+                    l3.Width = 100;
+                    l3.Opacity = 0.66;
+                    MainCanvas.Children.Add(l3);
+                    Canvas.SetLeft(l3, 100 * j);
+                    Canvas.SetTop(l3, 100 * i);
+                    bg[i, j] = l3;
 
                     Label p = new Label();
                     p.Height = 100;
                     p.Width = 100;
-                    p.MouseEnter += P_MouseEnter;
-                    p.MouseLeave += P_MouseLeave;
-                    p.MouseDown += PieceSelect;
                     MainCanvas.Children.Add(p);
                     Canvas.SetLeft(p, 100 * j);
                     Canvas.SetTop(p, 100 * i);
-                    labels[i, j] = p;
+                    plabels[i, j] = p;
+
+                    Ellipse l2 = new Ellipse();
+                    l2.Height = 33;
+                    l2.Width = 33;
+                    l2.Opacity = 0.66;
+                    MainCanvas.Children.Add(l2);
+                    Canvas.SetLeft(l2, 100 * j + 50 - l2.Width / 2);
+                    Canvas.SetTop(l2, 100 * i + 50 - l2.Height / 2);
+                    ebg[i, j] = l2;
+
+                    Label p2 = new Label();
+                    p2.Height = 100;
+                    p2.Width = 100;
+                    p2.MouseEnter += P_MouseEnter;
+                    p2.MouseLeave += P_MouseLeave;
+                    p2.MouseDown += PieceSelect;
+                    MainCanvas.Children.Add(p2);
+                    Canvas.SetLeft(p2, 100 * j);
+                    Canvas.SetTop(p2, 100 * i);
+                    labels[i, j] = p2;
                 }
             }
             LoadDefaultPositionPieces();
-                 
+
         }
         void LoadDefaultPositionPieces()
         {
@@ -214,59 +254,6 @@ namespace Chess
             foreach (Piece p in wpieces.Union(bpieces))
                 Pieces[p.I, p.J] = p;
         }
-
-        private async Task CheckPromotion(Piece topromote)
-        {
-            if (topromote.Color == PieceColor.White && topromote.I != 0)
-                return;
-            if (topromote.Color == PieceColor.Black && topromote.I != 7)
-                return;
-
-            Piece promoted = await PromotionBoxResult(topromote.Color);
-            promoted.I = topromote.I;
-            promoted.J = topromote.J;
-            if (topromote.Color == PieceColor.White)               
-            {
-                wpieces.Remove(topromote);
-                wpieces.Add(promoted);
-            }
-            else
-            {
-                bpieces.Remove(topromote);
-                bpieces.Add(promoted);
-            }               
-            Pieces[topromote.I, topromote.J] = promoted;           
-        }
-        async Task<Piece> PromotionBoxResult(PieceColor color)
-        {
-            Label overlay = new Label() { Height = 5000, Width = 5000, Background = Brushes.White, Opacity = 0.33 };
-            BaseCanvas.Children.Add(overlay);
-            Panel.SetZIndex(overlay, 10);
-
-            PromotionCanvas.Visibility = Visibility.Visible;
-            Panel.SetZIndex(PromotionCanvas, 100);
-
-            int c = (int)color;
-            QueenPromotion.Background = Piece.Queen[c];
-            KnightPromotion.Background = Piece.Knight[c];
-            BishopPromotion.Background = Piece.Bishop[c];
-            RookPromotion.Background = Piece.Rook[c];
-
-            while (promotion == null)
-                await Task.Delay(100);
-
-            Piece toreturn = promotion;
-            
-            promotion = null;
-
-            BaseCanvas.Children.Remove(overlay);
-            PromotionCanvas.Visibility = Visibility.Hidden;
-            return toreturn;
-        }
-        private void RookPromotion_Click(object sender, MouseEventArgs e) => promotion = new Rook(Turn, 0, 0);
-        private void QueenPromotion_Click(object sender, MouseEventArgs e) => promotion = new Queen(Turn, 0, 0);
-        private void KnightPromotion_Click(object sender, MouseEventArgs e) => promotion = new Knight(Turn, 0, 0);
-        private void BishopPromotion_Click(object sender, MouseEventArgs e) => promotion = new Bishop(Turn, 0, 0);
         private async void PieceSelect(object sender, MouseButtonEventArgs e)
         {
             if (calc)
@@ -279,7 +266,7 @@ namespace Chess
                     Piece selection = (Piece)((sender as Label).Tag);
                     selected = selection;
                     legalmoves = selection.PieceMoves(true, Pieces);
-                }                                  
+                }
             }
             else
             {
@@ -296,24 +283,24 @@ namespace Chess
                         selected.Move(m[0], m[1], Pieces);
                         bool legal = await LegalMove(Turn);
                         if (!legal)
-                        {                            
+                        {
                             ResetStateTo(savestate);
                             await FlashAnimation();
-                        }                            
+                        }
                         else
                         {
                             okmove = true;
                             selected.Moved = true;
                             InvalidateEnpassantTurns();
-                            if(selected.GetType() == typeof(Pawn))
+                            if (selected.GetType() == typeof(Pawn))
                             {
                                 CheckEnpassant((Pawn)selected, starti);
                                 await CheckPromotion(selected);
                             }
-                                
+
                         }
 
-                        
+
                         await CheckForCheck();
 
                         Cursor = Cursors.Arrow;
@@ -327,6 +314,69 @@ namespace Chess
             }
             UpdateUI();
             calc = false;
+        }
+        async Task FlashAnimation()
+        {
+            Stopwatch sw = new Stopwatch();
+            sw.Start();
+            while (sw.ElapsedMilliseconds < 1000)
+            {
+                if ((sw.ElapsedMilliseconds / 100) % 2 == 0)
+                    bg[selected.I,selected.J].Background = Brushes.Red;
+                else
+                    bg[selected.I, selected.J].Background = Brushes.Orange;
+                await Task.Delay(30);
+            }
+            sw.Stop();
+            sw = null;
+        }
+        async Task<bool> LegalMove(PieceColor c)
+        {
+            await Task.Run(CheckForCheck);
+
+            if (c == PieceColor.Black && blackincheck)
+                return false;
+            if (c == PieceColor.White && whiteincheck)
+                return false;
+            return true;
+        }
+        Piece[,] GetState(Piece[,] p)
+        {
+            Piece[,] tor = new Piece[8, 8];
+            for (int i = 0; i < 8; i++)
+            {
+                for (int j = 0; j < 8; j++)
+                {
+                    tor[i, j] = p[i, j];
+                }
+            }
+            return tor;
+        }
+        Task CheckForCheck()
+        {
+            whiteincheck = false;
+            blackincheck = false;
+            Piece targetking = bpieces.OfType<King>().First();
+            foreach (Piece p in wpieces.Where(x => x.isAlive))
+            {
+                List<int[]> legal = p.PieceMoves(false, Pieces);
+                foreach (int[] l in legal)
+                    if (l[0] == targetking.I && l[1] == targetking.J)
+                        blackincheck = true;
+            }
+
+            targetking = wpieces.OfType<King>().First();
+            foreach (Piece p in bpieces.Where(x => x.isAlive))
+            {
+                List<int[]> legal = p.PieceMoves(false, Pieces);
+                foreach (int[] l in legal)
+                    if (l[0] == targetking.I && l[1] == targetking.J)
+                        whiteincheck = true;
+            }
+
+            // check for game over in case it's a mate // todo
+
+            return Task.CompletedTask;
         }
         void CheckEnpassant(Pawn selected, int starti)
         {
@@ -370,70 +420,58 @@ namespace Chess
                 WhiteEnpassantTurn = false;
             }
         }
-        async Task FlashAnimation()
+        private async Task CheckPromotion(Piece topromote)
         {
-            Stopwatch sw = new Stopwatch();
-            sw.Start();
-            while(sw.ElapsedMilliseconds < 1000)
+            if (topromote.Color == PieceColor.White && topromote.I != 0)
+                return;
+            if (topromote.Color == PieceColor.Black && topromote.I != 7)
+                return;
+
+            Piece promoted = await PromotionBoxResult(topromote.Color);
+            promoted.I = topromote.I;
+            promoted.J = topromote.J;
+            if (topromote.Color == PieceColor.White)
             {
-                if ((sw.ElapsedMilliseconds / 100) % 2 == 0)
-                    MainCanvas.Background = Brushes.Red;
-                else
-                    MainCanvas.Background = Brushes.Gray;
-                await Task.Delay(30);
+                wpieces.Remove(topromote);
+                wpieces.Add(promoted);
             }
-            MainCanvas.Background = Brushes.Gray;
-            sw.Stop();
-            sw = null;
+            else
+            {
+                bpieces.Remove(topromote);
+                bpieces.Add(promoted);
+            }
+            Pieces[topromote.I, topromote.J] = promoted;
         }
-        async Task<bool> LegalMove(PieceColor c)
+        async Task<Piece> PromotionBoxResult(PieceColor color)
         {
-            await Task.Run(CheckForCheck);
+            Label overlay = new Label() { Height = 5000, Width = 5000, Background = Brushes.White, Opacity = 0.33 };
+            BaseCanvas.Children.Add(overlay);
+            Panel.SetZIndex(overlay, 10);
 
-            if (c == PieceColor.Black && blackincheck)
-                return false;
-            if (c == PieceColor.White && whiteincheck)
-                return false;
-            return true;
+            PromotionCanvas.Visibility = Visibility.Visible;
+            Panel.SetZIndex(PromotionCanvas, 100);
+
+            int c = (int)color;
+            QueenPromotion.Background = Piece.Queen[c];
+            KnightPromotion.Background = Piece.Knight[c];
+            BishopPromotion.Background = Piece.Bishop[c];
+            RookPromotion.Background = Piece.Rook[c];
+
+            while (promotion == null)
+                await Task.Delay(100);
+
+            Piece toreturn = promotion;
+
+            promotion = null;
+
+            BaseCanvas.Children.Remove(overlay);
+            PromotionCanvas.Visibility = Visibility.Hidden;
+            return toreturn;
         }
-        Piece[,] GetState(Piece[,] p)
-        {
-            Piece[,] tor = new Piece[8, 8];
-            for(int i = 0; i < 8; i++)
-            {
-                for(int j = 0; j < 8; j++)
-                {
-                    tor[i, j] = p[i, j];
-                }
-            }
-            return tor;
-        }
-        Task CheckForCheck()
-        {
-            whiteincheck = false;
-            blackincheck = false;
-            Piece targetking = bpieces.OfType<King>().First();
-            foreach (Piece p in wpieces.Where(x => x.isAlive))
-            {
-                List<int[]> legal = p.PieceMoves(false, Pieces);
-                foreach (int[] l in legal)
-                    if (l[0] == targetking.I && l[1] == targetking.J)
-                        blackincheck = true;
-            }
-
-            targetking = wpieces.OfType<King>().First();
-            foreach (Piece p in bpieces.Where(x => x.isAlive))
-            {
-                List<int[]> legal = p.PieceMoves(false, Pieces);
-                foreach (int[] l in legal)
-                    if (l[0] == targetking.I && l[1] == targetking.J)
-                        whiteincheck = true;
-            }
-
-            // check for game over in case it's a mate // todo
-
-            return Task.CompletedTask;
-        }
+        private void RookPromotion_Click(object sender, MouseEventArgs e) => promotion = new Rook(Turn, 0, 0);
+        private void QueenPromotion_Click(object sender, MouseEventArgs e) => promotion = new Queen(Turn, 0, 0);
+        private void KnightPromotion_Click(object sender, MouseEventArgs e) => promotion = new Knight(Turn, 0, 0);
+        private void BishopPromotion_Click(object sender, MouseEventArgs e) => promotion = new Bishop(Turn, 0, 0);
         private void P_MouseLeave(object sender, MouseEventArgs e)
         {
             Cursor = Cursors.Arrow;
@@ -451,13 +489,13 @@ namespace Chess
             {
                 foreach (int[] m in legalmoves)
                 {
-                    if(l == labels[m[0], m[1]])
+                    if (l == labels[m[0], m[1]])
                     {
                         Cursor = Cursors.Hand;
                         return;
-                    }                      
+                    }
                 }
-            }               
+            }
         }
 
         private void ResetGame_Click(object sender, MouseButtonEventArgs e) => ResetGame();
@@ -466,5 +504,6 @@ namespace Chess
         private void Label_MouseEnter(object sender, MouseEventArgs e) => Cursor = Cursors.Hand;
 
         private void Label_MouseLeave(object sender, MouseEventArgs e) => Cursor = Cursors.Arrow;
+
     }
 }
