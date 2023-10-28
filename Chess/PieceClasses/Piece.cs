@@ -7,23 +7,20 @@ namespace Chess.PieceClasses
 {
     public abstract class Piece
     {
-        public static Piece[,] Pieces = new Piece[8, 8];
-        public int I { get; protected set; }
-        public int J { get; protected set; }
+        //public static Piece[,] Pieces = new Piece[8, 8];
+        public int I { get; set; }
+        public int J { get; set; }
         public ImageBrush Body { get; protected set; }
         public PieceColor Color { get; protected set; }
         public bool Moved { get; set; } = false;
-        public bool isAlive { get; protected set; } = true;
-        public delegate void PromotionEventHandler (object sender);
-        public event PromotionEventHandler? PromotionEvent;
+        public bool isAlive { get; set; } = true;
         protected Piece(PieceColor color, int i, int j)
         {
             Color = color;
             I = i;
             J = j;
-            Pieces[i, j] = this;
         }
-        protected bool CheckMove(int i, int j, bool canattack)
+        protected bool CheckMove(int i, int j, bool canattack, Piece[,] Pieces)
         {
             try
             {
@@ -39,30 +36,12 @@ namespace Chess.PieceClasses
                 return false;
             }
         }
-        public static void ResetStateTo(Piece[,] state)
-        {
-            for(int i = 0; i < 8; i++)
-            {
-                for(int j = 0; j < 8; j++)
-                {
-                    Pieces[i,j] = state[i,j];
-                    if (state[i, j] != null)
-                    {
-                        Pieces[i, j].I = i;
-                        Pieces[i, j].J = j;
-                        Pieces[i, j].isAlive = true;
-                    }                      
-                }
-            }
-        }
-        public abstract List<int[]> PieceMoves(bool byPlayer);
-        public virtual void Move(int newI, int newJ)
+        public abstract List<int[]> PieceMoves(bool byPlayer, Piece[,] Pieces);
+        public virtual void Move(int newI, int newJ, Piece[,] Pieces)
         {
             if(Pieces[I, J].GetType() == typeof(Pawn))
             {
-                if ((Color == PieceColor.White && newI == 0) || (Color == PieceColor.Black && newI == 7))
-                    PromotionEvent?.Invoke(this);
-                else if ((Pieces[I, J] as Pawn)!.EnpassantPos != null && (Pieces[I, J] as Pawn)!.EnpassantPos![0] == newI && (Pieces[I, J] as Pawn)!.EnpassantPos![1] == newJ)
+                if ((Pieces[I, J] as Pawn)!.EnpassantPos != null && (Pieces[I, J] as Pawn)!.EnpassantPos![0] == newI && (Pieces[I, J] as Pawn)!.EnpassantPos![1] == newJ)
                 {
                     int dir = Color == PieceColor.White ? 1 : -1;
                     Pieces[newI + dir, newJ].isAlive = false;
@@ -74,9 +53,9 @@ namespace Chess.PieceClasses
                 if(Math.Abs(J - newJ) == 2)
                 {
                     if(newJ > 3) // king side castle
-                        Pieces[I, 7].Move(I, 5);
+                        Pieces[I, 7].Move(I, 5, Pieces);
                     else // queen side castle
-                        Pieces[I, 0].Move(I, 3);
+                        Pieces[I, 0].Move(I, 3, Pieces);
                 }
             }
             if (Pieces[newI, newJ] != null)

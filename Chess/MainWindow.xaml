@@ -11,7 +11,7 @@
         Background="LightSlateGray"
         Title="MainWindow" Height="900" Width="1200">
     <Grid>
-        <Canvas>
+        <Canvas x:Name="BaseCanvas">
 
             <Canvas x:Name="UICanvas" Height="900" Width="1200" HorizontalAlignment="Center" VerticalAlignment="Top">
                 <StackPanel x:Name="BlackCaptures" Height="32" Width="798" Canvas.Left="201" Canvas.Top="851" HorizontalAlignment="Center" VerticalAlignment="Top" Orientation="Horizontal">
@@ -21,10 +21,29 @@
 
                 </StackPanel>
             </Canvas>
+            <Label Background="Black" Height="804" Width="804" Canvas.Left="198" Canvas.Top="48"></Label>
             <Canvas x:Name="MainCanvas" Width="800" Height="800" Canvas.Left="200" Background="Gray" HorizontalAlignment="Center" VerticalAlignment="Top" Canvas.Top="50"/>
             <Label Content="RESET" Height="70" Width="138" FontSize="36" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" Background="#FFFDFF00" BorderBrush="#FF484848" BorderThickness="5,5,5,5" Canvas.Left="1034" Canvas.Top="415" HorizontalAlignment="Left" VerticalAlignment="Center" MouseDown="ResetGame_Click" MouseEnter="Label_MouseEnter" MouseLeave="Label_MouseLeave"></Label>
             <Label Content="X" Height="48" Width="48" FontSize="22" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" Background="Red" BorderBrush="#FF484848" BorderThickness="2,2,2,2" HorizontalAlignment="Left" VerticalAlignment="Center" Canvas.Left="1152" FontWeight="Bold" MouseDown="ExitButton_Click" MouseEnter="Label_MouseEnter" MouseLeave="Label_MouseLeave"/>
 
+            <Canvas x:Name="PromotionCanvas" Height="230" Width="820" Canvas.Left="190" Canvas.Top="335" Background="Black" HorizontalAlignment="Left" VerticalAlignment="Center" Visibility="Hidden">
+                <Label Height="210" Width="800" Canvas.Left="10" Canvas.Top="10" HorizontalAlignment="Left" VerticalAlignment="Center" Background="LightGray"/>
+
+                <Label Height="180" Width="180" Canvas.Left="620" Canvas.Top="25" HorizontalAlignment="Left" VerticalAlignment="Center" Background="Black"></Label>
+                <Label Height="180" Width="180" Canvas.Left="20" Canvas.Top="25" HorizontalAlignment="Left" VerticalAlignment="Center"  Background="Black"></Label>
+                <Label Height="180" Width="180" Canvas.Left="220" Canvas.Top="25" HorizontalAlignment="Left" VerticalAlignment="Center" Background="Black"></Label>
+                <Label Height="180" Width="180" Canvas.Left="420" Canvas.Top="25" HorizontalAlignment="Left" VerticalAlignment="Center" Background="Black"></Label>
+
+                <Label Height="174" Width="174" Canvas.Left="623" Canvas.Top="28" HorizontalAlignment="Left" VerticalAlignment="Center" Background="White"></Label>
+                <Label Height="174" Width="174" Canvas.Left="23" Canvas.Top="28" HorizontalAlignment="Left" VerticalAlignment="Center" Background="White"></Label>
+                <Label Height="174" Width="174" Canvas.Left="223" Canvas.Top="28" HorizontalAlignment="Left" VerticalAlignment="Center" Background="White"></Label>
+                <Label Height="174" Width="174" Canvas.Left="423" Canvas.Top="28" HorizontalAlignment="Left" VerticalAlignment="Center" Background="White"></Label>
+
+                <Label x:Name="KnightPromotion" Height="180" Width="180" Canvas.Left="620" Canvas.Top="25" HorizontalAlignment="Left" VerticalAlignment="Center" Background="Transparent" MouseEnter="Label_MouseEnter" MouseLeave="Label_MouseLeave" MouseDown="KnightPromotion_Click"></Label>
+                <Label x:Name="QueenPromotion" Height="180" Width="180" Canvas.Left="20" Canvas.Top="25" HorizontalAlignment="Left" VerticalAlignment="Center"  Background="Transparent" MouseEnter="Label_MouseEnter" MouseLeave="Label_MouseLeave" MouseDown="QueenPromotion_Click"></Label>
+                <Label x:Name="BishopPromotion" Height="180" Width="180" Canvas.Left="220" Canvas.Top="25" HorizontalAlignment="Left" VerticalAlignment="Center" Background="Transparent" MouseEnter="Label_MouseEnter" MouseLeave="Label_MouseLeave" MouseDown="BishopPromotion_Click"></Label>
+                <Label x:Name="RookPromotion" Height="180" Width="180" Canvas.Left="420" Canvas.Top="25" HorizontalAlignment="Left" VerticalAlignment="Center" Background="Transparent" MouseEnter="Label_MouseEnter" MouseLeave="Label_MouseLeave" MouseDown="RookPromotion_Click"></Label>
+            </Canvas>
 
 
         </Canvas>

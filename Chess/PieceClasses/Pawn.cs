@@ -10,26 +10,26 @@ namespace Chess.PieceClasses
             Body = c == PieceColor.White ? Pawn[0] : Pawn[1];
         }
 
-        public override List<int[]> PieceMoves(bool byPlayer)
+        public override List<int[]> PieceMoves(bool byPlayer, Piece[,] Pieces)
         {
             List<int[]> toreturn = new List<int[]>();
             int idir = Color == PieceColor.White ? -1 : 1;
             bool forward = false;
 
-            if (CheckMove(I + idir, J, false))
+            if (CheckMove(I + idir, J, false, Pieces))
             {
                 toreturn.Add(new int[] { I + idir, J });
                 forward = true;
             }
 
-            if (CheckMove(I + idir, J - 1, true))
+            if (CheckMove(I + idir, J - 1, true, Pieces))
                 toreturn.Add(new int[] { I + idir, J - 1 });
-            if (CheckMove(I + idir, J + 1, true))
+            if (CheckMove(I + idir, J + 1, true, Pieces))
                 toreturn.Add(new int[] { I + idir, J + 1 });
 
             if (!Moved && forward)
             {
-                if (CheckMove(I + idir * 2, J, false))
+                if (CheckMove(I + idir * 2, J, false, Pieces))
                     toreturn.Add(new int[] { I + idir * 2, J });
             }
             if (EnpassantPos != null)

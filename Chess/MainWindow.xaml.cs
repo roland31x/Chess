@@ -26,7 +26,7 @@ namespace Chess
         List<Piece> bpieces = new List<Piece>();
         Label[,] labels;
         Label[,] bg;
-        Piece[,] Game = Piece.Pieces;
+        Piece[,] Pieces = new Piece[8, 8];
         Piece? selected;
         List<int[]>? legalmoves;
         PieceColor Turn = PieceColor.White;
@@ -35,6 +35,8 @@ namespace Chess
         bool whiteincheck = false;
         bool blackincheck = false;
         bool calc = false;
+
+        Piece? promotion;
 
         public MainWindow()
         {
@@ -56,10 +58,10 @@ namespace Chess
                 for(int j = 0; j < 8; j++)
                 {
                     bg[i, j].Background = Brushes.Transparent;
-                    if (Game[i, j] != null)
+                    if (Pieces[i, j] != null)
                     {
-                        labels[i, j].Background = Game[i, j].Body;
-                        labels[i, j].Tag = Game[i, j];
+                        labels[i, j].Background = Pieces[i, j].Body;
+                        labels[i, j].Tag = Pieces[i, j];
                     }
                     else
                     {
@@ -87,6 +89,22 @@ namespace Chess
 
 
         }
+        public void ResetStateTo(Piece[,] state)
+        {
+            for (int i = 0; i < 8; i++)
+            {
+                for (int j = 0; j < 8; j++)
+                {
+                    Pieces[i, j] = state[i, j];
+                    if (state[i, j] != null)
+                    {
+                        Pieces[i, j].I = i;
+                        Pieces[i, j].J = j;
+                        Pieces[i, j].isAlive = true;
+                    }
+                }
+            }
+        }
         void ResetGame()
         {
             Turn = PieceColor.White;
@@ -99,7 +117,7 @@ namespace Chess
             legalmoves = null;
             for (int i = 0; i < 8; i++)
                 for (int j = 0; j < 8; j++)
-                    Game[i, j] = null;
+                    Pieces[i, j] = null;
             wpieces.Clear();
             bpieces.Clear();
             LoadDefaultPositionPieces();
@@ -114,30 +132,30 @@ namespace Chess
                 for (int j = 0; j < 8; j++)
                 {
                     Label l = new Label();
-                    l.Height = 98;
-                    l.Width = 98;
+                    l.Height = 100;
+                    l.Width = 100;
                     l.Background = (i + j) % 2 == 0 ? Brushes.Beige : Brushes.BurlyWood;
                     MainCanvas.Children.Add(l);
-                    Canvas.SetLeft(l,1 + 100 * j);
-                    Canvas.SetTop(l,1 + 100 * i);
+                    Canvas.SetLeft(l, 100 * j);
+                    Canvas.SetTop(l, 100 * i);
 
                     Label l2 = new Label();
-                    l2.Height = 98;
-                    l2.Width = 98;
+                    l2.Height = 100;
+                    l2.Width = 100;
                     MainCanvas.Children.Add(l2);
-                    Canvas.SetLeft(l2, 1 + 100 * j);
-                    Canvas.SetTop(l2, 1 + 100 * i);
+                    Canvas.SetLeft(l2, 100 * j);
+                    Canvas.SetTop(l2, 100 * i);
                     bg[i, j] = l2;
 
                     Label p = new Label();
-                    p.Height = 98;
-                    p.Width = 98;
+                    p.Height = 100;
+                    p.Width = 100;
                     p.MouseEnter += P_MouseEnter;
                     p.MouseLeave += P_MouseLeave;
                     p.MouseDown += PieceSelect;
                     MainCanvas.Children.Add(p);
-                    Canvas.SetLeft(p, 1 + 100 * j);
-                    Canvas.SetTop(p, 1 + 100 * i);
+                    Canvas.SetLeft(p, 100 * j);
+                    Canvas.SetTop(p, 100 * i);
                     labels[i, j] = p;
                 }
             }
@@ -190,17 +208,23 @@ namespace Chess
             {
                 Pawn white = new Pawn(PieceColor.White, 6, i);
                 Pawn black = new Pawn(PieceColor.Black, 1, i);
-                white.PromotionEvent += PromotionEvent;
-                black.PromotionEvent += PromotionEvent;
                 wpieces.Add(white);
                 bpieces.Add(black);
             }
+            foreach (Piece p in wpieces.Union(bpieces))
+                Pieces[p.I, p.J] = p;
         }
 
-        private async void PromotionEvent(object sender)
+        private async Task CheckPromotion(Piece topromote)
         {
-            Piece topromote = (sender as Piece)!;
+            if (topromote.Color == PieceColor.White && topromote.I != 0)
+                return;
+            if (topromote.Color == PieceColor.Black && topromote.I != 7)
+                return;
+
             Piece promoted = await PromotionBoxResult(topromote.Color);
+            promoted.I = topromote.I;
+            promoted.J = topromote.J;
             if (topromote.Color == PieceColor.White)               
             {
                 wpieces.Remove(topromote);
@@ -211,13 +235,38 @@ namespace Chess
                 bpieces.Remove(topromote);
                 bpieces.Add(promoted);
             }               
-            Game[topromote.I, topromote.J] = promoted;           
+            Pieces[topromote.I, topromote.J] = promoted;           
         }
         async Task<Piece> PromotionBoxResult(PieceColor color)
         {
-            
-        }
+            Label overlay = new Label() { Height = 5000, Width = 5000, Background = Brushes.White, Opacity = 0.33 };
+            BaseCanvas.Children.Add(overlay);
+            Panel.SetZIndex(overlay, 10);
 
+            PromotionCanvas.Visibility = Visibility.Visible;
+            Panel.SetZIndex(PromotionCanvas, 100);
+
+            int c = (int)color;
+            QueenPromotion.Background = Piece.Queen[c];
+            KnightPromotion.Background = Piece.Knight[c];
+            BishopPromotion.Background = Piece.Bishop[c];
+            RookPromotion.Background = Piece.Rook[c];
+
+            while (promotion == null)
+                await Task.Delay(100);
+
+            Piece toreturn = promotion;
+            
+            promotion = null;
+
+            BaseCanvas.Children.Remove(overlay);
+            PromotionCanvas.Visibility = Visibility.Hidden;
+            return toreturn;
+        }
+        private void RookPromotion_Click(object sender, MouseEventArgs e) => promotion = new Rook(Turn, 0, 0);
+        private void QueenPromotion_Click(object sender, MouseEventArgs e) => promotion = new Queen(Turn, 0, 0);
+        private void KnightPromotion_Click(object sender, MouseEventArgs e) => promotion = new Knight(Turn, 0, 0);
+        private void BishopPromotion_Click(object sender, MouseEventArgs e) => promotion = new Bishop(Turn, 0, 0);
         private async void PieceSelect(object sender, MouseButtonEventArgs e)
         {
             if (calc)
@@ -229,7 +278,7 @@ namespace Chess
                 {
                     Piece selection = (Piece)((sender as Label).Tag);
                     selected = selection;
-                    legalmoves = selection.PieceMoves(true);
+                    legalmoves = selection.PieceMoves(true, Pieces);
                 }                                  
             }
             else
@@ -243,12 +292,12 @@ namespace Chess
                         int starti = selected.I;
                         int startj = selected.J;
 
-                        Piece[,] savestate = GetState(Piece.Pieces);
-                        selected.Move(m[0], m[1]);
+                        Piece[,] savestate = GetState(Pieces);
+                        selected.Move(m[0], m[1], Pieces);
                         bool legal = await LegalMove(Turn);
                         if (!legal)
                         {                            
-                            Piece.ResetStateTo(savestate);
+                            ResetStateTo(savestate);
                             await FlashAnimation();
                         }                            
                         else
@@ -257,7 +306,11 @@ namespace Chess
                             selected.Moved = true;
                             InvalidateEnpassantTurns();
                             if(selected.GetType() == typeof(Pawn))
+                            {
                                 CheckEnpassant((Pawn)selected, starti);
+                                await CheckPromotion(selected);
+                            }
+                                
                         }
 
                         
@@ -281,20 +334,20 @@ namespace Chess
             {
                 int leftj = selected.J - 1;
                 int rightj = selected.J + 1;
-                if (leftj > 0 && leftj < 8 && Game[selected.I, leftj] != null)
-                    if (Game[selected.I, leftj].GetType() == typeof(Pawn) && Game[selected.I, leftj].Color != selected.Color)
+                if (leftj > 0 && leftj < 8 && Pieces[selected.I, leftj] != null)
+                    if (Pieces[selected.I, leftj].GetType() == typeof(Pawn) && Pieces[selected.I, leftj].Color != selected.Color)
                     {
-                        (Game[selected.I, leftj] as Pawn)!.EnpassantPos = new int[] { selected.I - (selected.Color == PieceColor.White ? -1 : 1), selected.J };
+                        (Pieces[selected.I, leftj] as Pawn)!.EnpassantPos = new int[] { selected.I - (selected.Color == PieceColor.White ? -1 : 1), selected.J };
                         if (Turn == PieceColor.White)
                             BlackEnpassantTurn = true;
                         else
                             WhiteEnpassantTurn = true;
                     }
 
-                if (rightj > 0 && rightj < 8 && Game[selected.I, rightj] != null)
-                    if (Game[selected.I, rightj].GetType() == typeof(Pawn) && Game[selected.I, rightj].Color != selected.Color)
+                if (rightj > 0 && rightj < 8 && Pieces[selected.I, rightj] != null)
+                    if (Pieces[selected.I, rightj].GetType() == typeof(Pawn) && Pieces[selected.I, rightj].Color != selected.Color)
                     {
-                        (Game[selected.I, rightj] as Pawn)!.EnpassantPos = new int[] { selected.I - (selected.Color == PieceColor.White ? -1 : 1), selected.J };
+                        (Pieces[selected.I, rightj] as Pawn)!.EnpassantPos = new int[] { selected.I - (selected.Color == PieceColor.White ? -1 : 1), selected.J };
                         if (Turn == PieceColor.White)
                             BlackEnpassantTurn = true;
                         else
@@ -362,7 +415,7 @@ namespace Chess
             Piece targetking = bpieces.OfType<King>().First();
             foreach (Piece p in wpieces.Where(x => x.isAlive))
             {
-                List<int[]> legal = p.PieceMoves(false);
+                List<int[]> legal = p.PieceMoves(false, Pieces);
                 foreach (int[] l in legal)
                     if (l[0] == targetking.I && l[1] == targetking.J)
                         blackincheck = true;
@@ -371,7 +424,7 @@ namespace Chess
             targetking = wpieces.OfType<King>().First();
             foreach (Piece p in bpieces.Where(x => x.isAlive))
             {
-                List<int[]> legal = p.PieceMoves(false);
+                List<int[]> legal = p.PieceMoves(false, Pieces);
                 foreach (int[] l in legal)
                     if (l[0] == targetking.I && l[1] == targetking.J)
                         whiteincheck = true;

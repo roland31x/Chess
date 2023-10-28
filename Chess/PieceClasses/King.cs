@@ -9,7 +9,7 @@ namespace Chess.PieceClasses
             Body = c == PieceColor.White ? King[0] : King[1];
         }
 
-        public override List<int[]> PieceMoves(bool byPlayer)
+        public override List<int[]> PieceMoves(bool byPlayer, Piece[,] Pieces)
         {
             List<int[]> toreturn = new List<int[]>();
             for (int i = -1; i <= 1; i++)
@@ -18,7 +18,7 @@ namespace Chess.PieceClasses
                 {
                     if (i == 0 && j == 0)
                         continue;
-                    if (CheckMove(I + i, J + j, true) || CheckMove(I + i, J + j, false))
+                    if (CheckMove(I + i, J + j, true, Pieces) || CheckMove(I + i, J + j, false, Pieces))
                     {
                         toreturn.Add(new int[] { I + i, J + j });
                     }
@@ -26,15 +26,15 @@ namespace Chess.PieceClasses
             }
             if (byPlayer)
             {
-                if (CanCastleKingSide())
+                if (CanCastleKingSide(Pieces))
                     toreturn.Add(new int[] { I, 6 });
-                if (CanCastleQueenSide())
+                if (CanCastleQueenSide(Pieces))
                     toreturn.Add(new int[] { I, 2 });
             }          
 
             return toreturn;
         }
-        bool CanCastleKingSide()
+        bool CanCastleKingSide(Piece[,] Pieces)
         {     
             if (Moved)
                 return false;
@@ -50,7 +50,7 @@ namespace Chess.PieceClasses
                 {
                     if(p == null || p.Color != other) 
                         continue;
-                    List<int[]> moves = p.PieceMoves(false);
+                    List<int[]> moves = p.PieceMoves(false, Pieces);
                     foreach (int[] move in moves)
                         if (move[0] == I && move[1] == j)
                             return false;
@@ -58,7 +58,7 @@ namespace Chess.PieceClasses
             }
             return true;
         }
-        bool CanCastleQueenSide()
+        bool CanCastleQueenSide(Piece[,] Pieces)
         {
             if (Moved)
                 return false;
@@ -74,7 +74,7 @@ namespace Chess.PieceClasses
                 {
                     if (p == null || p.Color != other)
                         continue;
-                    List<int[]> moves = p.PieceMoves(false);
+                    List<int[]> moves = p.PieceMoves(false, Pieces);
                     foreach (int[] move in moves)
                         if (move[0] == I && move[1] == j)
                             return false;
