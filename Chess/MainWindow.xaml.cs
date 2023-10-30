@@ -302,6 +302,10 @@ namespace Chess
 
 
                         await CheckForCheck();
+                        if (whiteincheck)
+                           await Task.Run(() => CheckForMate(PieceColor.White));
+                        if (blackincheck)
+                           await Task.Run(() => CheckForMate(PieceColor.Black));
 
                         Cursor = Cursors.Arrow;
                         break;
@@ -351,6 +355,37 @@ namespace Chess
                 }
             }
             return tor;
+        }
+        async Task CheckForMate(PieceColor c)
+        {
+            Piece[,] save = GetState(Pieces);
+            bool mate = true;
+            foreach (Piece p in wpieces.Union(bpieces).Where(x => x.isAlive && x.Color == c))
+            {
+                List<int[]> legal = p.PieceMoves(false, Pieces);
+                foreach (int[] l in legal)
+                {
+                    p.Move(l[0], l[1], Pieces);
+                    await CheckForCheck();
+                    if ((whiteincheck && c == PieceColor.White) || (blackincheck && c == PieceColor.Black))
+                    {
+                        ResetStateTo(save);
+                        continue;
+                    }
+                    else
+                    {
+                        mate = false;
+                        break;
+                    }
+
+                }
+                if (!mate)
+                    break;
+            }
+            if (mate)
+                MessageBox.Show("CHECK MATE");
+            ResetStateTo(save);
+
         }
         Task CheckForCheck()
         {
