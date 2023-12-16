@@ -36,7 +36,31 @@ namespace Chess
         List<int[]>? legalmoves;
 
         PieceColor _t = PieceColor.White;
-        PieceColor Turn { get { return _t; } set { _t = value; if (_t == PieceColor.White) { WhiteTimerBG.Fill = Brushes.Goldenrod; BlackTimerBG.Fill = Brushes.White; whitetimer.Start(); blacktimer.Stop(); } else { BlackTimerBG.Fill = Brushes.Goldenrod; WhiteTimerBG.Fill = Brushes.White; blacktimer.Start(); whitetimer.Stop(); } } }
+        PieceColor Turn 
+        { 
+            get 
+            { 
+                return _t; 
+            } 
+            set 
+            { 
+                _t = value; 
+                if (_t == PieceColor.White) 
+                { 
+                    WhiteTimerBG.Fill = Brushes.Goldenrod; 
+                    BlackTimerBG.Fill = Brushes.White; 
+                    whitetimer.Start(); 
+                    blacktimer.Stop(); 
+                } 
+                else 
+                { 
+                    BlackTimerBG.Fill = Brushes.Goldenrod; 
+                    WhiteTimerBG.Fill = Brushes.White; 
+                    blacktimer.Start(); 
+                    whitetimer.Stop(); 
+                } 
+            } 
+        }
         
         bool WhiteEnpassantTurn = false;
         bool BlackEnpassantTurn = false;
@@ -285,7 +309,7 @@ namespace Chess
                         if (!legal)
                         {
                             ResetStateTo(savestate);
-                            await FlashAnimation();
+                            await FlashAnimation(Turn == PieceColor.White ? wpieces.OfType<King>().First().I : bpieces.OfType<King>().First().I, Turn == PieceColor.White ? wpieces.OfType<King>().First().J : bpieces.OfType<King>().First().J);
                         }
                         else
                         {
@@ -319,16 +343,16 @@ namespace Chess
             UpdateUI();
             calc = false;
         }
-        async Task FlashAnimation()
+        async Task FlashAnimation(int I, int J)
         {
             Stopwatch sw = new Stopwatch();
             sw.Start();
             while (sw.ElapsedMilliseconds < 1000)
             {
                 if ((sw.ElapsedMilliseconds / 100) % 2 == 0)
-                    bg[selected.I,selected.J].Background = Brushes.Red;
+                    bg[I, J].Background = Brushes.Red;
                 else
-                    bg[selected.I, selected.J].Background = Brushes.Orange;
+                    bg[I, J].Background = Brushes.Orange;
                 await Task.Delay(30);
             }
             sw.Stop();
